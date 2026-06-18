@@ -1,29 +1,10 @@
 use Libraries.Game.Game
-
-use Libraries.Game.Graphics.Color
 use Libraries.Game.Graphics.Model
-use Libraries.Game.DesktopConfiguration
 use Libraries.Game.Graphics.AmbientLight
 use Libraries.Game.Graphics.DirectionalLight
-use Libraries.Containers.Array
 use Libraries.Game.Graphics.PointLight
-use Libraries.Game.Graphics.Camera
-use Libraries.Compute.Vector3
-use Libraries.Game.Graphics.Models.Data.Animation
-use Libraries.Game.Graphics.Models.Data.AnimationFrame
-use Libraries.Compute.Matrix4
-use Libraries.Game.Graphics.Models.Data.AnimationState
 use Libraries.Interface.Events.KeyboardListener
 use Libraries.Interface.Events.KeyboardEvent
-use Libraries.Game.GameStateManager
-use Libraries.Game.FocusManager
-use Libraries.Interface.Item
-use Libraries.Interface.Accessibility
-use Libraries.Game.Graphics.Models.Data.AnimationChannel
-use Libraries.Game.Graphics.Models.Data.AnimationNameGuesser
-use Libraries.Interface.Item3D
-use Libraries.Compute.Quaternion
-use Libraries.Containers.Number32BitArray
 use Libraries.Game.Graphics.Models.Vulkan.ModelBlueprintVulkan
 
 /* This is a helper class to explore Accessible Animation. It is pretty complex, 
@@ -33,18 +14,13 @@ class Main is Game, KeyboardListener
     Model cesium = undefined
     
     action Main
-        DesktopConfiguration config = GetDesktopConfiguration()
-        config:width = 2000
-        config:height = 1500
         StartGame()
     end
     
     action CreateGame
         AddLights()
-        
         //Add the models
         cesium = AddModel("Models/CesiumMan/CesiumMan.gltf", 1, 0,0,-3)
-        
         ModelBlueprintVulkan blue = cast(ModelBlueprintVulkan, cesium:GetModelBlueprint())
         cesium:Rotate(1,0,0,90)
         cesium:Rotate(0,0,1,90)
@@ -86,13 +62,13 @@ class Main is Game, KeyboardListener
     
     action ReleasedKey(KeyboardEvent event)
         if event:keyCode = event:SPACE
-            cesium:Focus()
-            //there's only one animation in this model, so it starts
-            //at a distance of 0 from the front
-            
-            cesium:StartAnimation(0)
-        elseif event:keyCode = event:E
-            cesium:StopAnimation()
+            if cesium:IsAnimating()
+                cesium:StopAnimation()
+            else
+                //there's only one animation in this model, so it starts
+                //at a distance of 0 from the front
+                cesium:StartAnimation(0)
+            end
 end
  end
 end
