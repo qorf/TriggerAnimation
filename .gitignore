@@ -1,3 +1,5 @@
 # Ignore .DS_Store files in the root and all subdirectories
 **/.DS_Store
 .DS_Store
+Build/
+Run/
