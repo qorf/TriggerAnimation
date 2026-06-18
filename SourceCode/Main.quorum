@@ -1,0 +1,193 @@
+use Libraries.Game.Game
+
+use Libraries.Game.Graphics.Color
+use Libraries.Game.Graphics.Model
+use Libraries.Game.DesktopConfiguration
+use Libraries.Game.Graphics.AmbientLight
+use Libraries.Game.Graphics.DirectionalLight
+use Libraries.Containers.Array
+use Libraries.Game.Graphics.PointLight
+use Libraries.Game.Graphics.Camera
+use Libraries.Compute.Vector3
+use Libraries.Game.Graphics.Models.Data.Animation
+use Libraries.Game.Graphics.Models.Data.AnimationFrame
+use Libraries.Compute.Matrix4
+use Libraries.Game.Graphics.Models.Data.AnimationState
+use Libraries.Interface.Events.KeyboardListener
+use Libraries.Interface.Events.KeyboardEvent
+use Libraries.Game.GameStateManager
+use Libraries.Game.FocusManager
+use Libraries.Interface.Item
+use Libraries.Interface.Accessibility
+use Libraries.Game.Graphics.Models.Data.AnimationChannel
+use Libraries.Game.Graphics.Models.Data.AnimationNameGuesser
+use Libraries.Interface.Item3D
+use Libraries.Compute.Quaternion
+use Libraries.Containers.Number32BitArray
+use Libraries.Game.Graphics.Models.Vulkan.ModelBlueprintVulkan
+
+/* This is a helper class to explore Accessible Animation. It is pretty complex, 
+but uses the 2-dummy solution to traverse the bone structure in an animated model.
+*/
+class Main is Game, KeyboardListener
+    Model cesium = undefined
+    Camera camera = undefined
+    number yaw = 0
+    Array<Model> models
+    GameStateManager manager
+            FocusManager fm = undefined
+    Item3D dummy1
+    Item3D dummy2
+    //There's only one animation in this model.
+    //Would need adjusting if there were multiple
+    Animation animation
+            Array<AnimationChannel> channels
+    integer channelIndex = 0
+    AnimationChannel currentChannel = undefined
+    
+    action Main
+        DesktopConfiguration config = GetDesktopConfiguration()
+        config:width = 2000
+        config:height = 1500
+        StartGame()
+    end
+    
+    action CreateGame
+        AddLights()
+        
+        //Add the models
+        cesium = AddModel("Models/CesiumMan/CesiumMan.gltf", 1, 0,0,-3)
+        ProcessAnimations(cesium)
+        
+        ModelBlueprintVulkan blue = cast(ModelBlueprintVulkan, cesium:GetModelBlueprint())
+        cesium:Rotate(1,0,0,90)
+        cesium:Rotate(0,0,1,90)
+        cesium:SetFocusable(true)
+        
+        //for an Experiment, use the 2-dummy trick
+        dummy1:SetPosition(cesium:GetPosition())
+        dummy2:SetPosition(cesium:GetPosition())
+        dummy1:SetFocusable(true)
+        dummy2:SetFocusable(true)
+        dummy1:SetAccessibilityCode(1)
+        dummy2:SetAccessibilityCode(1)
+        
+        Add(dummy1)
+        Add(dummy2)
+        
+        //Name your model if you want to.
+        //This is what the people that made it named the 3D model.
+        cesium:SetName("Cesium Man.")
+        cesium:Focus()
+        //Setup Camera
+        camera = GetCamera3D()
+        number near = camera:GetNear()
+        AddKeyboardListener(me)
+    end
+    
+    /*Animations have channels, which let you get all the bones. Animations also 
+have a name, which will be put in the model's description if the animation is active */
+    action ProcessAnimations(Model model)
+        i = 0
+        repeat while i < model:GetAnimationsSize()
+            animation = model:GetAnimation(i)
+            channels = animation:GetChannels()
+            //This is the name the animator chose. Here it is "Walking."
+            text name = animation:GetName()
+            j = 0
+            repeat while j < channels:GetSize()
+                AnimationChannel channel = channels:Get(j)
+                text boneName = channel:GetBone()
+                j = j + 1
+            end
+            
+            //The name guesser is primitive, but a start.
+            //What "should" it guess for an animation?
+            AnimationNameGuesser namer
+            text possibleName = namer:GuessName(animation)
+            i = i + 1
+        end
+    end
+    
+    action AddLights
+        AmbientLight ambient
+        ambient:SetColor(0.2, 0.2, 0.2, 1)
+        SetAmbientLight(ambient)
+        
+        DirectionalLight direct
+        direct:SetColor(0.8, 0.8, 0.8, 1)
+        direct:SetDirection(3, -3, 3)
+        Add(direct)
+        
+        PointLight point
+        point:SetColor(0.8, 0.8, 0.8, 1)
+        point:SetPosition(5, 5, -3)
+        point:SetIntensity(200)
+        Add(point)
+    end
+    
+    action AddModel(text path, number scale, number x, number y, number z) returns Model
+        Model model
+        model:Load(path)
+        model:Scale(scale, scale, scale)
+        
+        integer count = model:GetMeshCount()
+        model:SetPosition(x,y,z)
+        model:SetAccessibilityCode(1)
+        Add(model)
+        return model
+    end
+    
+    action ReleasedKey(KeyboardEvent event)
+        if event:keyCode = event:SPACE
+            cesium:Focus()
+            AnimationState state
+            state:SetStarted(true)
+            cesium:SetAnimationState(state)
+        elseif event:keyCode = event:TAB
+            output "Moving to Next Joint"
+            SetToNextDummy(currentChannel)
+            
+        elseif event:keyCode = event:ENTER
+            output "Entering Cesium Model."
+            if cesium:IsFocused()
+                channelIndex = 0
+                currentChannel = channels:Get(channelIndex)
+                SetToNextDummy(currentChannel)
+            end
+        elseif event:keyCode = event:E
+            cesium:StopAnimation()
+end
+ end
+    
+    action SetToNextDummy(AnimationChannel channel)
+        currentChannel = channels:Get(channelIndex)
+        text name = channel:GetBone()
+        /* 
+We could use anything for accessibility, but by default these are the options. Imagine
+the things in these arrays are like positions. They are not frames of animation, but 
+they are the raw positions of the bones over time, their rotations, scales, and timestamps
+that could be used to generate frames. They could be used in many ways.
+*/
+        Array<Vector3> positions = currentChannel:GetPositions()
+        Array<Quaternion> quaternions = currentChannel:GetRotations()
+        Array<Vector3> scalings = currentChannel:GetScalings()
+        Number32BitArray timestamps = currentChannel:GetTimestamps()
+        if dummy1:IsFocused()
+            dummy2:SetName(name)
+            dummy2:Focus()
+            output dummy2:GetName()
+        else
+            dummy1:SetName(name)
+            dummy1:Focus()
+            output dummy1:GetName()
+        end
+        channelIndex = channelIndex + 1
+        if channelIndex >= channels:GetSize()
+            channelIndex = 0
+        end
+    end
+    
+    action Update(number seconds)
+    end
+end
