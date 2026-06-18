@@ -13,7 +13,7 @@
     "ImageSheetRebuildOnCompile" : true,
     "Main" : "/SourceCode/Main.quorum",
     "Project Version" : "1.0",
-    "ProjectName" : "Animation",
+    "ProjectName" : "Trigger Animation",
     "ProjectType" : "JavaType",
     "PythonSpikeProgramSlot" : "0",
     "iosVersion" : "15.0"
