@@ -14,6 +14,7 @@ class Main is Game, KeyboardListener
     Model cesium = undefined
     
     action Main
+        UseVulkan(true)
         StartGame()
     end
     
@@ -22,8 +23,6 @@ class Main is Game, KeyboardListener
         //Add the models
         cesium = AddModel("Models/CesiumMan/CesiumMan.gltf", 1, 0,0,-3)
         ModelBlueprintVulkan blue = cast(ModelBlueprintVulkan, cesium:GetModelBlueprint())
-        cesium:Rotate(1,0,0,90)
-        cesium:Rotate(0,0,1,90)
         cesium:SetFocusable(true)
         
         //Name your model if you want to.
